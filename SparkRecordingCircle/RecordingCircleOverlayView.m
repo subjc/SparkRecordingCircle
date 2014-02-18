@@ -11,8 +11,10 @@
 @interface RecordingCircleOverlayView ()
 
 @property (nonatomic, strong) NSMutableArray *progressLayers;
-@property (nonatomic, strong) CAShapeLayer *currentProgressLayer;
 @property (nonatomic, strong) UIBezierPath *circlePath;
+
+@property (nonatomic, strong) CAShapeLayer *currentProgressLayer;
+@property (nonatomic, strong) CAShapeLayer *backgroundLayer;
 
 @property (nonatomic, assign) CGFloat strokeWidth;
 @property (nonatomic, assign, getter = hasFinishedAnimating) BOOL finishedAnimating;
@@ -44,13 +46,13 @@
 
 - (void)addBackgroundLayer
 {
-    CAShapeLayer *backgroundLayer = [CAShapeLayer layer];
-    backgroundLayer.path = self.circlePath.CGPath;
-    backgroundLayer.strokeColor = [[UIColor lightGrayColor] CGColor];
-    backgroundLayer.fillColor = [[UIColor clearColor] CGColor];
-    backgroundLayer.lineWidth = self.strokeWidth;
+    self.backgroundLayer = [CAShapeLayer layer];
+    self.backgroundLayer.path = self.circlePath.CGPath;
+    self.backgroundLayer.strokeColor = [[UIColor lightGrayColor] CGColor];
+    self.backgroundLayer.fillColor = [[UIColor clearColor] CGColor];
+    self.backgroundLayer.lineWidth = self.strokeWidth;
     
-    [self.layer addSublayer:backgroundLayer];
+    [self.layer addSublayer:self.backgroundLayer];
 }
 
 - (void)addNewLayer
@@ -109,6 +111,17 @@
             [progressLayer addAnimation:strokeStartAnimation forKey:@"strokeStartAnimation"];
         }
     }
+    
+    CABasicAnimation *backgroundLayerAnimation = [CABasicAnimation animationWithKeyPath:@"strokeStart"];
+    backgroundLayerAnimation.duration = duration;
+    backgroundLayerAnimation.fromValue = @(self.backgroundLayer.strokeStart);
+    backgroundLayerAnimation.toValue = @(1.f);
+    backgroundLayerAnimation.autoreverses = NO;
+    backgroundLayerAnimation.repeatCount = 0.f;
+    backgroundLayerAnimation.fillMode = kCAFillModeForwards;
+    backgroundLayerAnimation.removedOnCompletion = NO;
+    backgroundLayerAnimation.delegate = self;
+    [self.backgroundLayer addAnimation:backgroundLayerAnimation forKey:@"strokeStartAnimation"];
 }
 
 - (void)removeAnimations
@@ -119,6 +132,9 @@
         progressLayer.strokeEnd = [progressLayer.presentationLayer strokeEnd];
         [progressLayer removeAllAnimations];
     }
+    
+    self.backgroundLayer.strokeStart = [self.backgroundLayer.presentationLayer strokeStart];
+    [self.backgroundLayer removeAllAnimations];
 }
 
 #pragma UIResponder overrides
