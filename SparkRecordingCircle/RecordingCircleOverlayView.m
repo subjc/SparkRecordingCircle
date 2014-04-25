@@ -17,7 +17,7 @@
 @property (nonatomic, strong) CAShapeLayer *backgroundLayer;
 
 @property (nonatomic, assign) CGFloat strokeWidth;
-@property (nonatomic, assign, getter = hasFinishedAnimating) BOOL finishedAnimating;
+@property (nonatomic, assign, getter = isCircleComplete) BOOL circleComplete;
 
 @end
 
@@ -79,52 +79,58 @@
 }
 
 - (void)updateAnimations
-{    
+{
     CGFloat duration = self.duration * (1.f - [[self.progressLayers firstObject] strokeEnd]);
     CGFloat strokeEndFinal = 1.f;
     
     for (CAShapeLayer *progressLayer in self.progressLayers)
     {
-        CABasicAnimation *strokeEndAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+        CABasicAnimation *strokeEndAnimation = nil;
+        strokeEndAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
         strokeEndAnimation.duration = duration;
         strokeEndAnimation.fromValue = @(progressLayer.strokeEnd);
         strokeEndAnimation.toValue = @(strokeEndFinal);
         strokeEndAnimation.autoreverses = NO;
         strokeEndAnimation.repeatCount = 0.f;
-        strokeEndAnimation.fillMode = kCAFillModeForwards;
-        strokeEndAnimation.removedOnCompletion = NO;
-        strokeEndAnimation.delegate = self;
+        
+        CGFloat previousStrokeEnd = progressLayer.strokeEnd;
+        progressLayer.strokeEnd = strokeEndFinal;
+        
         [progressLayer addAnimation:strokeEndAnimation forKey:@"strokeEndAnimation"];
         
-        strokeEndFinal -= (progressLayer.strokeEnd - progressLayer.strokeStart);
+        strokeEndFinal -= (previousStrokeEnd - progressLayer.strokeStart);
         
         if (progressLayer != self.currentProgressLayer)
         {
-            CABasicAnimation *strokeStartAnimation = [CABasicAnimation animationWithKeyPath:@"strokeStart"];
+            CABasicAnimation *strokeStartAnimation = nil;
+            strokeStartAnimation = [CABasicAnimation animationWithKeyPath:@"strokeStart"];
             strokeStartAnimation.duration = duration;
             strokeStartAnimation.fromValue = @(progressLayer.strokeStart);
             strokeStartAnimation.toValue = @(strokeEndFinal);
             strokeStartAnimation.autoreverses = NO;
             strokeStartAnimation.repeatCount = 0.f;
-            strokeStartAnimation.fillMode = kCAFillModeForwards;
-            strokeStartAnimation.removedOnCompletion = NO;
+            
+            progressLayer.strokeStart = strokeEndFinal;
+            
             [progressLayer addAnimation:strokeStartAnimation forKey:@"strokeStartAnimation"];
         }
     }
     
-    CABasicAnimation *backgroundLayerAnimation = [CABasicAnimation animationWithKeyPath:@"strokeStart"];
+    CABasicAnimation *backgroundLayerAnimation = nil;
+    backgroundLayerAnimation = [CABasicAnimation animationWithKeyPath:@"strokeStart"];
     backgroundLayerAnimation.duration = duration;
     backgroundLayerAnimation.fromValue = @(self.backgroundLayer.strokeStart);
     backgroundLayerAnimation.toValue = @(1.f);
     backgroundLayerAnimation.autoreverses = NO;
     backgroundLayerAnimation.repeatCount = 0.f;
-    backgroundLayerAnimation.fillMode = kCAFillModeForwards;
-    backgroundLayerAnimation.removedOnCompletion = NO;
     backgroundLayerAnimation.delegate = self;
+    
+    self.backgroundLayer.strokeStart = 1.0;
+    
     [self.backgroundLayer addAnimation:backgroundLayerAnimation forKey:@"strokeStartAnimation"];
 }
 
-- (void)removeAnimations
+- (void)updateLayerModelsForPresentationState
 {
     for (CAShapeLayer *progressLayer in self.progressLayers)
     {
@@ -141,7 +147,7 @@
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    if (self.hasFinishedAnimating == NO)
+    if (self.isCircleComplete == NO)
     {
         [self addNewLayer];
         [self updateAnimations];
@@ -150,9 +156,9 @@
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    if (self.hasFinishedAnimating == NO)
+    if (self.isCircleComplete == NO)
     {
-        [self removeAnimations];
+        [self updateLayerModelsForPresentationState];
     }
 }
 
@@ -160,10 +166,9 @@
 
 - (void)animationDidStop:(CAAnimation *)anim finished:(BOOL)flag
 {
-    if (self.hasFinishedAnimating == NO && flag)
+    if (self.isCircleComplete == NO && flag)
     {
-        [self removeAnimations];
-        self.finishedAnimating = flag;
+        self.circleComplete = flag;
     }
 }
 
